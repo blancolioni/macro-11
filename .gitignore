@@ -1,0 +1,20 @@
+# Object file
+*.o
+
+# Ada Library Information
+*.ali
+
+# Build files
+*.o
+*.lst
+a.out
+build
+
+# Generated files
+macro11.gpr
+src/macro11-paths.ads
+src/macro11-options.ad[bs]
+src/.#*#
+.macro11-options
+.pdp11-options
+trace.txt

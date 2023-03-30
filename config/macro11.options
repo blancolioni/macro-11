@@ -1,0 +1,8 @@
+package Macro11.Options is
+
+   Verbose       : Boolean  := False;
+   Output        : String   := "a.out";
+   Format        : String   := "a.out";
+   Warnings      : Boolean;
+
+end Macro11.Options;

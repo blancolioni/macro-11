@@ -1,0 +1,4 @@
+verbose = yes
+output = a.out
+format = a.out
+warnings = yes
