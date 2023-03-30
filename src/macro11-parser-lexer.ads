@@ -10,7 +10,11 @@ private package Macro11.Parser.Lexer is
    procedure Scan;
 
    procedure Error (Message : String);
+   procedure Warning (Message : String);
+   procedure Information (Message : String);
+
    function Has_Errors return Boolean;
+   function Has_Warnings return Boolean;
    procedure Clear_Errors;
 
    function Tok return Token;

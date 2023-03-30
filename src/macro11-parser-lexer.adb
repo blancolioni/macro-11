@@ -21,6 +21,7 @@ package body Macro11.Parser.Lexer is
    Current     : Token_Lists.Cursor;
    Source_File : Macro11.Files.Reference;
    Got_Error   : Boolean := False;
+   Got_Warning : Boolean := False;
 
    procedure Load (Path : String);
 
@@ -31,6 +32,7 @@ package body Macro11.Parser.Lexer is
    procedure Clear_Errors is
    begin
       Got_Error := False;
+      Got_Warning := False;
    end Clear_Errors;
 
    -----------
@@ -64,6 +66,27 @@ package body Macro11.Parser.Lexer is
    begin
       return Got_Error;
    end Has_Errors;
+
+   ------------------
+   -- Has_Warnings --
+   ------------------
+
+   function Has_Warnings return Boolean is
+   begin
+      return Got_Warning;
+   end Has_Warnings;
+
+   -----------------
+   -- Information --
+   -----------------
+
+   procedure Information (Message : String) is
+   begin
+      Ada.Text_IO.Put_Line
+        (Ada.Text_IO.Standard_Error,
+         Macro11.Files.Show_Context (Tok_Context)
+         & ": information: " & Message);
+   end Information;
 
    ----------
    -- Load --
@@ -356,5 +379,18 @@ package body Macro11.Parser.Lexer is
    begin
       return Macro11.Names."-" (Token_Lists.Element (Current).Text);
    end Tok_Text;
+
+   -------------
+   -- Warning --
+   -------------
+
+   procedure Warning (Message : String) is
+   begin
+      Ada.Text_IO.Put_Line
+        (Ada.Text_IO.Standard_Error,
+         Macro11.Files.Show_Context (Tok_Context)
+         & ": warning: " & Message);
+      Got_Warning := True;
+   end Warning;
 
 end Macro11.Parser.Lexer;
