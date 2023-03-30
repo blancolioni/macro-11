@@ -8,10 +8,11 @@ with Macro11.Files;
 with Macro11.Syntax.Bindings;
 with Macro11.Syntax.Constants;
 with Macro11.Syntax.Defining_Names;
-with Macro11.Syntax.Line_Sequences;
-with Macro11.Syntax.Names;
 with Macro11.Syntax.Expressions;
 with Macro11.Syntax.Expressions.Modes;
+with Macro11.Syntax.Expressions.Operators;
+with Macro11.Syntax.Line_Sequences;
+with Macro11.Syntax.Names;
 with Macro11.Syntax.Statements;
 
 with Macro11.Values.Constants;
@@ -31,6 +32,9 @@ package body Macro11.Parser is
      return Macro11.Syntax.Expressions.Reference;
 
    function Parse_Mode_Expression
+     return Macro11.Syntax.Expressions.Reference;
+
+   function Parse_Operator_Expression
      return Macro11.Syntax.Expressions.Reference;
 
    -------------------
@@ -144,13 +148,7 @@ package body Macro11.Parser is
       elsif At_Mode_Expression then
          return Parse_Mode_Expression;
       else
-         return Result : constant Macro11.Syntax.Expressions.Reference :=
-           Macro11.Syntax.Expressions.Reference
-             (Macro11.Syntax.Names.Name
-                (Tok_Context, "bad expression: " & Tok_Text))
-         do
-            Scan;
-         end return;
+         return Parse_Operator_Expression;
       end if;
    end Parse_Expression;
 
@@ -335,5 +333,71 @@ package body Macro11.Parser is
            "Cannot parse a mode starting with '" & Tok_Text & "'";
       end if;
    end Parse_Mode_Expression;
+
+   -------------------------------
+   -- Parse_Operator_Expression --
+   -------------------------------
+
+   function Parse_Operator_Expression
+     return Macro11.Syntax.Expressions.Reference
+   is
+      Context : constant Macro11.Files.File_Context := Tok_Context;
+   begin
+      if Tok in Tok_Plus_Sign | Tok_Minus_Sign then
+         declare
+            use Macro11.Syntax.Expressions.Operators;
+            Op : constant Unary_Operator_Type :=
+                   (if Tok = Tok_Minus_Sign
+                    then Unary_Minus
+                    else Unary_Plus);
+         begin
+            Scan;
+            return Macro11.Syntax.Expressions.Reference
+              (Unary (Context, Op, Parse_Operator_Expression));
+         end;
+      elsif Tok = Tok_Integer_Constant then
+         declare
+            use Pdp11;
+            Value : Word_16 := 0;
+            Image : constant String := Tok_Text;
+         begin
+            for Ch of Image loop
+               Value := Value * 8 + Character'Pos (Ch) - 48;
+            end loop;
+
+            return Result : constant Macro11.Syntax.Expressions.Reference :=
+              Macro11.Syntax.Expressions.Reference
+                (Macro11.Syntax.Constants.Create
+                   (Tok_Context,
+                    Macro11.Values.Constants.Constant_Value (Value)))
+            do
+               Scan;
+            end return;
+         end;
+      elsif Tok = Tok_Identifier then
+         return Result : constant Macro11.Syntax.Expressions.Reference :=
+           Macro11.Syntax.Expressions.Reference
+             (Macro11.Syntax.Names.Name
+                (Tok_Context, Tok_Text))
+         do
+            Scan;
+         end return;
+      else
+         Error ("bad expression");
+         return Result : constant Macro11.Syntax.Expressions.Reference :=
+           Macro11.Syntax.Expressions.Reference
+             (Macro11.Syntax.Names.Name
+                (Tok_Context, "bad expression: " & Tok_Text))
+         do
+            while Tok /= Tok_End_Of_File
+              and then Tok /= Tok_End_Of_Line
+              and then Tok /= Tok_Comma
+            loop
+               Scan;
+            end loop;
+         end return;
+      end if;
+
+   end Parse_Operator_Expression;
 
 end Macro11.Parser;
