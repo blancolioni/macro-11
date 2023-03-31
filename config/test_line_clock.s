@@ -4,8 +4,7 @@ line_clock_ctrl   = 177546
 tick_count = 10000
 
       mov pc, r0
-      add #vector, r0
-      sub #2, r0
+      add #vector-2, r0
       mov r0, @#line_clock_vector
       mov #340, @#line_clock_psw
       mov #100, @#line_clock_ctrl

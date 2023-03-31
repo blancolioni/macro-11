@@ -31,4 +31,7 @@ private package Macro11.Parser.Tokens is
       Tok_Up_Arrow,
       Tok_Backslash);
 
+   subtype Operator_Token is
+     Token range Tok_Plus_Sign .. Tok_Exclamation_Point;
+
 end Macro11.Parser.Tokens;

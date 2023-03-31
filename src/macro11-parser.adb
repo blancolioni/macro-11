@@ -28,6 +28,9 @@ package body Macro11.Parser is
    function At_Mode_Expression
      return Boolean;
 
+   function At_Operator
+     return Boolean;
+
    function Parse_Expression
      return Macro11.Syntax.Expressions.Reference;
 
@@ -36,6 +39,13 @@ package body Macro11.Parser is
 
    function Parse_Operator_Expression
      return Macro11.Syntax.Expressions.Reference;
+
+   function Parse_Primary_Expression
+     return Macro11.Syntax.Expressions.Reference;
+
+   function Parse_Binary_Operator
+     return Macro11.Syntax.Expressions.Operators.Binary_Operator_Type
+     with Pre => At_Operator;
 
    -------------------
    -- At_Expression --
@@ -64,6 +74,17 @@ package body Macro11.Parser is
                  and then Next_Tok = Tok_Left_Parenthesis)
         or else Tok = Tok_Number_Sign or else Tok = Tok_At_Sign;
    end At_Mode_Expression;
+
+   -----------------
+   -- At_Operator --
+   -----------------
+
+   function At_Operator
+     return Boolean
+   is
+   begin
+      return Tok in Operator_Token;
+   end At_Operator;
 
    ------------------
    -- Clear_Errors --
@@ -110,6 +131,28 @@ package body Macro11.Parser is
       end;
    end Load;
 
+   ---------------------------
+   -- Parse_Binary_Operator --
+   ---------------------------
+
+   function Parse_Binary_Operator
+     return Macro11.Syntax.Expressions.Operators.Binary_Operator_Type
+   is
+      use Macro11.Syntax.Expressions.Operators;
+   begin
+      return Op : constant Binary_Operator_Type :=
+        (case Operator_Token (Tok) is
+            when Tok_Plus_Sign => Op_Add,
+            when Tok_Minus_Sign => Op_Subtract,
+            when Tok_Asterisk => Op_Multiply,
+            when Tok_Slash => Op_Divide,
+            when Tok_Ampersand => Op_And,
+            when Tok_Exclamation_Point => Op_Or)
+      do
+         Scan;
+      end return;
+   end Parse_Binary_Operator;
+
    ----------------------
    -- Parse_Expression --
    ----------------------
@@ -118,34 +161,7 @@ package body Macro11.Parser is
      return Macro11.Syntax.Expressions.Reference
    is
    begin
-      if Tok = Tok_Integer_Constant then
-         declare
-            use Pdp11;
-            Value : Word_16 := 0;
-            Image : constant String := Tok_Text;
-         begin
-            for Ch of Image loop
-               Value := Value * 8 + Character'Pos (Ch) - 48;
-            end loop;
-
-            return Result : constant Macro11.Syntax.Expressions.Reference :=
-              Macro11.Syntax.Expressions.Reference
-                (Macro11.Syntax.Constants.Create
-                   (Tok_Context,
-                    Macro11.Values.Constants.Constant_Value (Value)))
-            do
-               Scan;
-            end return;
-         end;
-      elsif Tok = Tok_Identifier then
-         return Result : constant Macro11.Syntax.Expressions.Reference :=
-           Macro11.Syntax.Expressions.Reference
-             (Macro11.Syntax.Names.Name
-                (Tok_Context, Tok_Text))
-         do
-            Scan;
-         end return;
-      elsif At_Mode_Expression then
+      if At_Mode_Expression then
          return Parse_Mode_Expression;
       else
          return Parse_Operator_Expression;
@@ -355,7 +371,38 @@ package body Macro11.Parser is
             return Macro11.Syntax.Expressions.Reference
               (Unary (Context, Op, Parse_Operator_Expression));
          end;
-      elsif Tok = Tok_Integer_Constant then
+      else
+         declare
+            Primary : constant Macro11.Syntax.Expressions.Reference :=
+                        Parse_Primary_Expression;
+         begin
+            if At_Operator then
+               declare
+                  use Macro11.Syntax.Expressions.Operators;
+                  Op : constant Binary_Operator_Type :=
+                         Parse_Binary_Operator;
+               begin
+                  return Macro11.Syntax.Expressions.Reference
+                    (Binary (Context, Op, Primary,
+                     Parse_Operator_Expression));
+               end;
+            else
+               return Primary;
+            end if;
+         end;
+      end if;
+
+   end Parse_Operator_Expression;
+
+   ------------------------------
+   -- Parse_Primary_Expression --
+   ------------------------------
+
+   function Parse_Primary_Expression
+     return Macro11.Syntax.Expressions.Reference
+   is
+   begin
+      if Tok = Tok_Integer_Constant then
          declare
             use Pdp11;
             Value : Word_16 := 0;
@@ -397,7 +444,6 @@ package body Macro11.Parser is
             end loop;
          end return;
       end if;
-
-   end Parse_Operator_Expression;
+   end Parse_Primary_Expression;
 
 end Macro11.Parser;
