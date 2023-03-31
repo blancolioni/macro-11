@@ -16,6 +16,11 @@ package Macro11.Values.Instructions is
       return Pdp11.ISA.Instruction_Type
      with Pre => This.all in Instance'Class;
 
+   function Is_Byte_Instruction
+     (This : Values.Reference)
+      return Boolean
+     with Pre => This.all in Instance'Class;
+
 private
 
    type Instance is new Parent with
@@ -33,5 +38,10 @@ private
      (This : Values.Reference)
       return Pdp11.ISA.Instruction_Type
    is (Reference (This).Instruction);
+
+   function Is_Byte_Instruction
+     (This : Values.Reference)
+      return Boolean
+   is (Reference (This).Byte_Size);
 
 end Macro11.Values.Instructions;

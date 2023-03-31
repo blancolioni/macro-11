@@ -86,6 +86,8 @@ package body Macro11.Syntax.Names is
          declare
             Op : constant Instruction_Type :=
                    Macro11.Values.Instructions.Get_Instruction (Value);
+            Byte : constant Boolean :=
+                     Macro11.Values.Instructions.Is_Byte_Instruction (Value);
          begin
             if Has_Source_Operand (Op) then
                Context.Next_State := Encode_Src;
@@ -95,6 +97,7 @@ package body Macro11.Syntax.Names is
                Context.Next_State := Write_Opcodes;
             end if;
             Context.Instruction.Instruction := Op;
+            Context.Instruction.Word := not Byte;
          end;
       elsif Value.Is_Register then
          if Context.Next_State = Encode_Src then
