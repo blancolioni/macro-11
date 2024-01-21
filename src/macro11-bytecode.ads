@@ -42,6 +42,10 @@ package Macro11.Bytecode is
      (This  : in out Instance'Class;
       Value : Pdp11.Word_16);
 
+   procedure Append
+     (This  : in out Instance'Class;
+      Value : Pdp11.Word_32);
+
    procedure Write
      (This : Instance'Class;
       Path : String);

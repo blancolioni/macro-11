@@ -1,0 +1,15 @@
+name = "macro11"
+description = "MACRO-11 assembler for the PDP-11 (original DEC syntax) "
+version = "0.1.0-dev"
+
+authors = ["Fraser Wilson"]
+maintainers = ["Fraser Wilson <fraser@thewhitelion.eu>"]
+maintainers-logins = ["blancolioni"]
+licenses = "GPL-3.0-or-later"
+website = "https://github.com/blancolioni/macro-11"
+tags = ["pdp11", "assembler"]
+
+executables = ["macro11-driver"]
+
+[[depends-on]]
+wl_lib = "~0.1.1-dev"

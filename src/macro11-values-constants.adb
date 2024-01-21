@@ -6,7 +6,7 @@ package body Macro11.Values.Constants is
    -- Constant_Value --
    --------------------
 
-   function Constant_Value (From : Pdp11.Word_16)
+   function Constant_Value (From : Pdp11.Word_32)
                             return Reference
    is
    begin
@@ -19,7 +19,7 @@ package body Macro11.Values.Constants is
 
    overriding function To_String (This : Instance) return String is
    begin
-      return Pdp11.Images.Octal_Image (This.Word_Value);
+      return Pdp11.Images.Octal_Image (This.Word_Value, True);
    end To_String;
 
 end Macro11.Values.Constants;

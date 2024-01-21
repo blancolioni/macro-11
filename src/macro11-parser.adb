@@ -1,4 +1,4 @@
-with Pdp11;
+with Pdp11.ISA;
 
 with Macro11.Parser.Tokens;            use Macro11.Parser.Tokens;
 with Macro11.Parser.Lexer;             use Macro11.Parser.Lexer;
@@ -8,14 +8,15 @@ with Macro11.Files;
 with Macro11.Syntax.Bindings;
 with Macro11.Syntax.Constants;
 with Macro11.Syntax.Defining_Names;
-with Macro11.Syntax.Expressions;
 with Macro11.Syntax.Expressions.Modes;
 with Macro11.Syntax.Expressions.Operators;
+with Macro11.Syntax.Expressions.Values;
 with Macro11.Syntax.Line_Sequences;
 with Macro11.Syntax.Names;
 with Macro11.Syntax.Statements;
 
 with Macro11.Values.Constants;
+with Macro11.Values.Registers;
 
 package body Macro11.Parser is
 
@@ -34,7 +35,12 @@ package body Macro11.Parser is
    function Parse_Expression
      return Macro11.Syntax.Expressions.Reference;
 
+   type Nullable_Expression is
+     access all Macro11.Syntax.Expressions.Instance'Class;
+
    function Parse_Mode_Expression
+     (Skipped_Initial_Offset : Boolean := False;
+      Initial_Offset         : Nullable_Expression := null)
      return Macro11.Syntax.Expressions.Reference;
 
    function Parse_Operator_Expression
@@ -68,8 +74,8 @@ package body Macro11.Parser is
      return Boolean
    is
    begin
-      return (Tok = Tok_Minus_Sign and then Next_Tok = Tok_Left_Parenthesis)
-        or else Tok = Tok_Left_Parenthesis
+      return ((Tok = Tok_Minus_Sign or else Tok = Tok_Plus_Sign)
+              and then Next_Tok = Tok_Left_Parenthesis)
         or else ((Tok = Tok_Identifier or else Tok = Tok_Integer_Constant)
                  and then Next_Tok = Tok_Left_Parenthesis)
         or else Tok = Tok_Number_Sign or else Tok = Tok_At_Sign;
@@ -270,27 +276,34 @@ package body Macro11.Parser is
    ---------------------------
 
    function Parse_Mode_Expression
-     return Macro11.Syntax.Expressions.Reference
+     (Skipped_Initial_Offset : Boolean := False;
+      Initial_Offset         : Nullable_Expression := null)
+      return Macro11.Syntax.Expressions.Reference
    is
       Context       : constant Macro11.Files.File_Context := Tok_Context;
       Deferred      : Boolean := False;
       Autoincrement : Boolean := False;
       Autodecrement : Boolean := False;
    begin
-      if Tok = Tok_At_Sign then
-         Deferred := True;
-         Scan;
-      end if;
-      if Tok = Tok_Number_Sign then
-         Scan;
-         declare
-            Expr : constant Syntax.Expressions.Reference :=
-                     Parse_Expression;
-         begin
-            return Syntax.Expressions.Reference
-              (Syntax.Expressions.Modes.Immediate
-                 (Context, Expr, Deferred));
-         end;
+      pragma Assert (not Skipped_Initial_Offset
+                     or else Tok = Tok_Left_Parenthesis);
+
+      if not Skipped_Initial_Offset then
+         if Tok = Tok_At_Sign then
+            Deferred := True;
+            Scan;
+         end if;
+         if Tok = Tok_Number_Sign then
+            Scan;
+            declare
+               Expr : constant Syntax.Expressions.Reference :=
+                        Parse_Expression;
+            begin
+               return Syntax.Expressions.Reference
+                 (Syntax.Expressions.Modes.Immediate
+                    (Context, Expr, Deferred));
+            end;
+         end if;
       end if;
 
       if Tok = Tok_Minus_Sign
@@ -316,11 +329,14 @@ package body Macro11.Parser is
                   Deferred      => Deferred,
                   Autodecrement => Autodecrement));
          end;
-      elsif Tok = Tok_Left_Parenthesis then
+      elsif not Skipped_Initial_Offset
+        and then Tok = Tok_Left_Parenthesis
+      then
          Scan;
+
          declare
-            Expr : constant Syntax.Expressions.Reference :=
-                     Parse_Expression;
+            Expr    : constant Syntax.Expressions.Reference :=
+                        Parse_Expression;
          begin
             if Tok = Tok_Right_Parenthesis then
                Scan;
@@ -343,6 +359,37 @@ package body Macro11.Parser is
                   Expression    => Expr,
                   Deferred      => Deferred,
                   Autoincrement => Autoincrement));
+         end;
+      elsif Skipped_Initial_Offset or else At_Expression then
+         declare
+            Index : constant Syntax.Expressions.Reference :=
+                      (if Skipped_Initial_Offset
+                       then Syntax.Expressions.Reference (Initial_Offset)
+                       else Parse_Primary_Expression);
+         begin
+            if Tok = Tok_Left_Parenthesis then
+               Scan;
+
+               declare
+                  Expr : constant Syntax.Expressions.Reference :=
+                           Parse_Expression;
+               begin
+                  if Tok = Tok_Right_Parenthesis then
+                     Scan;
+                  else
+                     Error ("missing ')'");
+                  end if;
+                  return Syntax.Expressions.Reference
+                    (Syntax.Expressions.Modes.Indexed
+                       (Context    => Context,
+                        Expression => Expr,
+                        Index      => Index,
+                        Deferred   => Deferred));
+               end;
+            else
+               raise Constraint_Error with
+                 "expected a '('";
+            end if;
          end;
       else
          raise Constraint_Error with
@@ -368,8 +415,20 @@ package body Macro11.Parser is
                     else Unary_Plus);
          begin
             Scan;
-            return Macro11.Syntax.Expressions.Reference
-              (Unary (Context, Op, Parse_Operator_Expression));
+            if Tok = Tok_Integer_Constant
+              and then Next_Tok = Tok_Left_Parenthesis
+            then
+               declare
+                  Expr  : constant Syntax.Expressions.Reference :=
+                            Parse_Primary_Expression;
+               begin
+                  return Parse_Mode_Expression
+                    (True, Nullable_Expression (Unary (Context, Op, Expr)));
+               end;
+            else
+               return Macro11.Syntax.Expressions.Reference
+                 (Unary (Context, Op, Parse_Operator_Expression));
+            end if;
          end;
       else
          declare
@@ -401,11 +460,12 @@ package body Macro11.Parser is
    function Parse_Primary_Expression
      return Macro11.Syntax.Expressions.Reference
    is
+      Context : constant Macro11.Files.File_Context := Tok_Context;
    begin
       if Tok = Tok_Integer_Constant then
          declare
             use Pdp11;
-            Value : Word_16 := 0;
+            Value : Word_32 := 0;
             Image : constant String := Tok_Text;
          begin
             for Ch of Image loop
@@ -429,21 +489,73 @@ package body Macro11.Parser is
          do
             Scan;
          end return;
-      else
-         Error ("bad expression");
-         return Result : constant Macro11.Syntax.Expressions.Reference :=
-           Macro11.Syntax.Expressions.Reference
-             (Macro11.Syntax.Names.Name
-                (Tok_Context, "bad expression: " & Tok_Text))
-         do
-            while Tok /= Tok_End_Of_File
-              and then Tok /= Tok_End_Of_Line
-              and then Tok /= Tok_Comma
-            loop
+      elsif Tok = Tok_Percent_Sign then
+         Scan;
+         if Tok = Tok_Integer_Constant then
+            declare
+               V : constant Natural := Natural'Value (Tok_Text);
+            begin
+               if V > 7 then
+                  Error ("register index must be between 0 and 7");
+               end if;
                Scan;
-            end loop;
-         end return;
+               return Macro11.Syntax.Expressions.Values.Value_Expression
+                 (Context,
+                  Macro11.Values.Registers.Register
+                    (Pdp11.ISA.Register_Index
+                         (if V <= 7 then V else 0)));
+            end;
+         else
+            Error ("expected a register index");
+         end if;
+      elsif Tok = Tok_Left_Parenthesis then
+         Scan;
+         declare
+            At_Mode : constant Boolean :=
+                        Tok = Tok_Identifier
+                            and then Next_Tok = Tok_Right_Parenthesis;
+            Autoincrement : Boolean := False;
+            Expr          : constant Syntax.Expressions.Reference :=
+                              Parse_Expression;
+         begin
+            if Tok = Tok_Right_Parenthesis then
+               Scan;
+            else
+               Error ("missing ')'");
+            end if;
+
+            if At_Mode then
+               if Tok = Tok_Plus_Sign then
+                  Autoincrement := True;
+                  Scan;
+               end if;
+
+               return Syntax.Expressions.Reference
+                 (Syntax.Expressions.Modes.Mode
+                    (Context       => Context,
+                     Expression    => Expr,
+                     Deferred      => False,
+                     Autoincrement => Autoincrement));
+            else
+               return Expr;
+            end if;
+         end;
       end if;
+
+      Error ("bad expression");
+      return Result : constant Macro11.Syntax.Expressions.Reference :=
+        Macro11.Syntax.Expressions.Reference
+          (Macro11.Syntax.Names.Name
+             (Tok_Context, "bad expression: " & Tok_Text))
+      do
+         while Tok /= Tok_End_Of_File
+           and then Tok /= Tok_End_Of_Line
+           and then Tok /= Tok_Comma
+         loop
+            Scan;
+         end loop;
+      end return;
+
    end Parse_Primary_Expression;
 
 end Macro11.Parser;

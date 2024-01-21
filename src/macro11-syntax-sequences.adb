@@ -47,7 +47,7 @@ package body Macro11.Syntax.Sequences is
          if not Element_Lists.Has_Element (Position) then
             return Empty_Reference_Array;
          else
-            return (1 => Syntax.Reference (Element_Lists.Element (Position)))
+            return [Syntax.Reference (Element_Lists.Element (Position))]
               & To_Array (Element_Lists.Next (Position));
          end if;
       end To_Array;

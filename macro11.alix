@@ -1,9 +1,0 @@
-project_name = Macro11
-source_dir = src
-main_unit = macro11-driver
-exec_name = macro11
-config_dir = config
-depend = { project = wlib version = any }
-depend = { project = pdp11 version = any }
-path_unit = { unit = Macro11.Paths
-              path = src/macro11-paths.ads }

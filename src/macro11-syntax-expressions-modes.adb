@@ -1,3 +1,4 @@
+with Ada.Text_IO;
 with Macro11.Values.Registers;
 
 package body Macro11.Syntax.Expressions.Modes is
@@ -15,7 +16,10 @@ package body Macro11.Syntax.Expressions.Modes is
    is
       use type Pdp11.Address_Type;
       Size : constant Natural :=
-               (if This.Immediate or else This.Indexed
+               (if This.Immediate and then not This.Deferred
+                and then This.Has_Property (Double_Allocation)
+                then 4
+                elsif This.Immediate or else This.Indexed
                 then 2
                 else This.Expression.Value.Size);
    begin
@@ -108,8 +112,15 @@ package body Macro11.Syntax.Expressions.Modes is
       R : constant Register_Index :=
             (if This.Expression.Value.Is_Register
              then Macro11.Values.Registers.Get_Register (This.Expression.Value)
-             else 0);
+             elsif This.Immediate or else This.Relative
+             then 7
+             else raise Constraint_Error
+               with "unknown register in " & This.Expression.To_String);
    begin
+      if R = 0 then
+         Ada.Text_IO.Put_Line ("r0: " & This.Expression.To_String);
+      end if;
+
       return (if This.Immediate
               then (Autoincrement_Mode, This.Deferred, 7)
               elsif This.Relative
@@ -162,7 +173,6 @@ package body Macro11.Syntax.Expressions.Modes is
                elsif Pdp11.ISA.Has_Immediate_Word (Op)
                then This.Expression.Value.To_Word_Value
                else 0);
-
    begin
       if Context.Next_State = Encode_Src then
          Context.Instruction.Src := Op;
@@ -173,6 +183,14 @@ package body Macro11.Syntax.Expressions.Modes is
          Context.Dst_Word := Imm;
          Context.Next_State := Write_Opcodes;
       end if;
+      if This.Has_Property (Double_Allocation)
+        and Then Pdp11.ISA.Is_Immediate_Operand (Op)
+      then
+         if This.Expression.Value.Has_Word_Value then
+            Context.D_Word := This.Expression.Value.To_DWord_Value;
+         end if;
+      end if;
+
    end Translate_Instance;
 
 end Macro11.Syntax.Expressions.Modes;

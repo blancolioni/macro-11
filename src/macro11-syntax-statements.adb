@@ -64,16 +64,21 @@ package body Macro11.Syntax.Statements is
      (This : in out Instance)
    is
       Is_Branch : Boolean := False;
+      Is_Float  : Boolean := False;
    begin
       for Child of Dispatch (This).Children loop
          if Is_Branch then
             Child.Set_Property (No_Allocation);
+         elsif Is_Float then
+            Child.Set_Property (Double_Allocation);
          end if;
 
          Child.Check (This.Env);
 
          if Child.Has_Property (Expressions.Branch_Instruction) then
             Is_Branch := True;
+         elsif Child.Has_Property (Expressions.Floating_Point_Context) then
+            Is_Float := True;
          end if;
       end loop;
    end Check_Instance;
@@ -85,16 +90,16 @@ package body Macro11.Syntax.Statements is
    overriding function Children (This : Instance) return Reference_Array is
       Label : constant Reference_Array :=
                 (if This.Label_Child = null then Empty_Reference_Array
-                 else (1 => Syntax.Reference (This.Label_Child)));
+                 else [1 => Syntax.Reference (This.Label_Child)]);
       Operator : constant Reference_Array :=
                    (if This.Operator_Child = null then Empty_Reference_Array
-                    else (1 => Syntax.Reference (This.Operator_Child)));
+                    else [Syntax.Reference (This.Operator_Child)]);
       Operands : constant Reference_Array :=
                    (if This.Operands_Child = null then Empty_Reference_Array
-                    else (1 => Syntax.Reference (This.Operands_Child)));
+                    else [Syntax.Reference (This.Operands_Child)]);
       Comment  : constant Reference_Array :=
                 (if This.Comment_Child = null then Empty_Reference_Array
-                 else (1 => Syntax.Reference (This.Comment_Child)));
+                 else [Syntax.Reference (This.Comment_Child)]);
    begin
       return Label & Operator & Operands & Comment;
    end Children;
@@ -184,13 +189,21 @@ package body Macro11.Syntax.Statements is
       for Child of Dispatch (This).Children loop
          Child.Translate (Context, Target);
       end loop;
+
       if Context.Next_State = Write_Opcodes then
          Target.Append
            (Pdp11.ISA.Encode (Context.Instruction));
          if Pdp11.ISA.Has_Source_Operand (Context.Instruction.Instruction)
            and then Pdp11.ISA.Has_Immediate_Word (Context.Instruction.Src)
          then
-            Target.Append (Context.Src_Word);
+            if Pdp11.ISA.Is_Immediate_Operand (Context.Instruction.Src)
+              and then Context.Instruction.Instruction
+            in Pdp11.ISA.Floating_Point_Instruction
+            then
+               Target.Append (Context.D_Word);
+            else
+               Target.Append (Context.Src_Word);
+            end if;
          end if;
          if Pdp11.ISA.Has_Destination_Operand
            (Context.Instruction.Instruction)

@@ -11,7 +11,8 @@ package Macro11.Syntax.Expressions is
       return Macro11.Values.Reference
       is abstract;
 
-   Branch_Instruction : constant Property_Type;
+   Branch_Instruction     : constant Property_Type;
+   Floating_Point_Context : constant Property_Type;
 
 private
 
@@ -28,6 +29,7 @@ private
    overriding function To_Word_Value (This : Instance) return Pdp11.Word_16
    is (Dispatch (This).Value.To_Word_Value);
 
-   Branch_Instruction : constant Property_Type := "branch-instruction";
+   Branch_Instruction     : constant Property_Type := "branch-instruction";
+   Floating_Point_Context : constant Property_Type := "floating-point-context";
 
 end Macro11.Syntax.Expressions;

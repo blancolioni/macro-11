@@ -16,4 +16,11 @@ src/macro11-paths.ads
 src/.#*#
 .macro11-options
 .pdp11-options
-trace.txt
+trace.txt/obj/
+/bin/
+/alire/
+/config/
+/obj/
+/bin/
+/alire/
+/config/

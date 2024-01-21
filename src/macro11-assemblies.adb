@@ -7,7 +7,6 @@ with Pdp11.Images;
 with Pdp11.ISA;
 
 with Macro11.Files;
-with Macro11.Paths;
 with Macro11.Parser;
 
 with Macro11.Syntax.Bindings;
@@ -45,13 +44,20 @@ package body Macro11.Assemblies is
    begin
       This.Line_Number := This.Line_Number + 1;
       Ada.Integer_Text_IO.Put (This.File, This.Line_Number, 4);
-      Set_Col (This.File, 6);
       if Item.Has_Address then
+         if not Target.Is_Allocated (Item.Address) then
+            Ada.Text_IO.Put_Line
+              (Ada.Text_IO.Standard_Error,
+               "invalid address: "
+               & Pdp11.Images.Octal_Image (Pdp11.Word_16 (Item.Address)));
+            return;
+         end if;
+         Set_Col (This.File, 6);
          Put (This.File,
               Pdp11.Images.Octal_Image (Pdp11.Word_16 (Item.Address)));
       else
          Put (This.File,
-              "      ");
+              "            ");
       end if;
 
       declare
@@ -59,6 +65,15 @@ package body Macro11.Assemblies is
          Address : Pdp11.Address_Type := Item.Address;
       begin
          for I in 1 .. Item.Num_Words loop
+            if not Target.Is_Allocated (Address) then
+               Ada.Text_IO.Put_Line
+                 (Ada.Text_IO.Standard_Error,
+                  "invalid address: "
+                  & Pdp11.Images.Octal_Image (Pdp11.Word_16 (Address)));
+               Ada.Text_IO.Put_Line
+                 (Ada.Text_IO.Standard_Error,
+                  Item'Image);
+            end if;
             Put (This.File, " ");
             Put (This.File,
                  Pdp11.Images.Octal_Image (Target.Get_Word_16 (Address)));
@@ -148,8 +163,7 @@ package body Macro11.Assemblies is
 
    function Create return Reference is
       Std  : constant Macro11.Files.Reference :=
-               Macro11.Files.File
-                 (Macro11.Paths.Config_File ("primitives"));
+               Macro11.Files.File ("./share/macro11/primitives");
       Line : Natural := 0;
 
    begin
@@ -245,13 +259,15 @@ package body Macro11.Assemblies is
                end;
             end loop;
 
-            for Ch in Character range '0' .. '7' loop
-               Register (('r', Ch),
-                         Pdp11.ISA.Register_Index'Value ((1 => Ch)));
-            end loop;
+            if False then
+               for Ch in Character range '0' .. '7' loop
+                  Register (['r', Ch],
+                            Pdp11.ISA.Register_Index'Value ([Ch]));
+               end loop;
 
-            Register ("sp", 6);
-            Register ("pc", 7);
+               Register ("sp", 6);
+               Register ("pc", 7);
+            end if;
 
             This.Files.Append (Syntax.Reference (Primitives));
          end;

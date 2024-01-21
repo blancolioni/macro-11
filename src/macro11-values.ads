@@ -11,6 +11,9 @@ package Macro11.Values is
    function To_Word_Value (This : Instance) return Pdp11.Word_16
      with Pre'Class => This.Has_Word_Value;
 
+   function To_DWord_Value (This : Instance) return Pdp11.Word_32;
+     --  with Pre'Class => This.Has_Word_Value;
+
    function Size (This : Instance) return Natural;
 
    function Is_Instruction (This : Instance) return Boolean;
@@ -22,6 +25,8 @@ private
 
    function Has_Word_Value (This : Instance) return Boolean is (False);
    function To_Word_Value (This : Instance) return Pdp11.Word_16 is (0);
+   function To_DWord_Value (This : Instance) return Pdp11.Word_32
+   is (Pdp11.Word_32 (Instance'Class (This).To_Word_Value));
 
    function Size (This : Instance) return Natural is (0);
 

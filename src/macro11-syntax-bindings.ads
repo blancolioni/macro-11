@@ -30,8 +30,8 @@ private
    overriding function Children
      (This : Instance)
       return Reference_Array
-   is (Macro11.Syntax.Reference (This.Name_Child),
-       Macro11.Syntax.Reference (This.Value_Child));
+   is ([Macro11.Syntax.Reference (This.Name_Child),
+       Macro11.Syntax.Reference (This.Value_Child)]);
 
    overriding function Class_Name
      (This : Instance)

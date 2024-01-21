@@ -26,4 +26,6 @@ private
    overriding function To_Word_Value (This : Instance) return Pdp11.Word_16
    is (Pdp11.Word_16 (This.Address));
 
+   overriding function Size (This : Instance) return Natural is (2);
+
 end Macro11.Values.Addresses;

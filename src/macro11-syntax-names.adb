@@ -12,11 +12,13 @@ package body Macro11.Syntax.Names is
       Offset : in out Pdp11.Address_Type)
    is
       use type Pdp11.Address_Type;
-      use type Macro11.Entries.Reference;
+      use type Macro11.Values.Reference;
       Name : constant String := Macro11.Names."-" (This.Name);
    begin
       if not This.Has_Entry then
          This.Add_Error ("undefined: " & Name);
+      elsif This.Get_Entry.Value = null then
+         Offset := Offset + 2;
       else
          Offset := Offset + Pdp11.Address_Type (This.Get_Entry.Value.Size);
       end if;
@@ -37,8 +39,10 @@ package body Macro11.Syntax.Names is
          if This.Item.Defined then
             if This.Item.Value.Is_Instruction then
                case Values.Instructions.Get_Instruction (This.Item.Value) is
-               when Pdp11.ISA.Branch_Instruction =>
-                  This.Set_Property (Expressions.Branch_Instruction);
+                  when Pdp11.ISA.Branch_Instruction =>
+                     This.Set_Property (Expressions.Branch_Instruction);
+                  when Pdp11.ISA.Floating_Point_Instruction =>
+                     This.Set_Property (Expressions.Floating_Point_Context);
                when others =>
                   null;
                end case;
@@ -91,6 +95,8 @@ package body Macro11.Syntax.Names is
          begin
             if Has_Source_Operand (Op) then
                Context.Next_State := Encode_Src;
+            elsif Has_Source_Register (Op) then
+               Context.Next_State := Encode_Src;
             elsif Has_Destination_Operand (Op) then
                Context.Next_State := Encode_Dst;
             else
@@ -104,7 +110,11 @@ package body Macro11.Syntax.Names is
             Context.Instruction.Src := (Register_Mode, False,
                                         Values.Registers.Get_Register
                                           (Value));
-            Context.Next_State := Encode_Dst;
+            if Has_Destination_Operand (Context.Instruction.Instruction) then
+               Context.Next_State := Encode_Dst;
+            else
+               Context.Next_State := Write_Opcodes;
+            end if;
          elsif Context.Next_State = Encode_Dst then
             Context.Instruction.Dst := (Register_Mode, False,
                                         Values.Registers.Get_Register
@@ -142,6 +152,20 @@ package body Macro11.Syntax.Names is
                      else Word_8 (256 - Distance));
                end if;
             end;
+         end if;
+      elsif Value.Has_Word_Value then
+         if Context.Next_State = Encode_Src then
+            Context.Instruction.Src := (Index_Mode, False, 7);
+            Context.Src_Word :=
+              Value.To_Word_Value - Word_16 (Context.Address) - 4;
+            Context.Next_State := Encode_Dst;
+         elsif Context.Next_State = Encode_Dst then
+            Context.Instruction.Dst := (Index_Mode, False, 7);
+            Context.Dst_Word :=
+              Value.To_Word_Value - Word_16 (Context.Address) - 4
+              - (if Has_Source_Operand (Context.Instruction.Instruction)
+                 then 2 else 0);
+            Context.Next_State := Write_Opcodes;
          end if;
       end if;
    end Translate_Instance;

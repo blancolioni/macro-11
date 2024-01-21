@@ -15,7 +15,7 @@ private package Macro11.Syntax is
    type Optional_Reference is access all Instance'Class;
 
    type Reference_Array is array (Positive range <>) of Reference;
-   Empty_Reference_Array : constant Reference_Array (1 .. 0) := (others => <>);
+   Empty_Reference_Array : constant Reference_Array (1 .. 0) := [others => <>];
 
    function Children
      (This : Instance)
@@ -149,6 +149,7 @@ private package Macro11.Syntax is
       return Boolean;
 
    No_Allocation      : constant Property_Type;
+   Double_Allocation  : constant Property_Type;
 
 private
 
@@ -205,8 +206,10 @@ private
          Instruction : Pdp11.ISA.Instruction_Record;
          Src_Word    : Pdp11.Word_16 := 0;
          Dst_Word    : Pdp11.Word_16 := 0;
+         D_Word      : Pdp11.Word_32 := 0;
       end record;
 
    No_Allocation      : constant Property_Type := "no-allocation";
+   Double_Allocation  : constant Property_Type := "double-allocation";
 
 end Macro11.Syntax;

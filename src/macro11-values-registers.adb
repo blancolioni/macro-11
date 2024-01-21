@@ -15,7 +15,7 @@ package body Macro11.Values.Registers is
 
    overriding function To_String (This : Instance) return String is
    begin
-      return ('%', Character'Val (48 + Natural (This.Index)));
+      return ['%', Character'Val (48 + Natural (This.Index))];
    end To_String;
 
 end Macro11.Values.Registers;

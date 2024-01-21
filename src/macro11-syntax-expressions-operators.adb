@@ -30,12 +30,11 @@ package body Macro11.Syntax.Expressions.Operators is
       return Reference
    is
    begin
-      return new Instance'
-        (Operator   => Operator,
-         Context    => Context,
-         Left       => Expressions.Reference (Left),
-         Right      => Expressions.Reference (Right),
-         others     => <>);
+      return This : constant Reference := new Instance (Operator) do
+         This.Context := Context;
+         This.Left := Expressions.Reference (Left);
+         This.Right := Expressions.Reference (Right);
+      end return;
    end Binary;
 
    --------------------
@@ -65,10 +64,10 @@ package body Macro11.Syntax.Expressions.Operators is
       return Parent (This).Children
         & (case This.Operator is
               when Unary_Operator_Type =>
-             (1 => Syntax.Reference (This.Expression)),
+             [Syntax.Reference (This.Expression)],
               when Binary_Operator_Type =>
-             (Syntax.Reference (This.Left),
-              Syntax.Reference (This.Right)));
+             [Syntax.Reference (This.Left),
+              Syntax.Reference (This.Right)]);
    end Children;
 
    --------------------
@@ -162,11 +161,16 @@ package body Macro11.Syntax.Expressions.Operators is
       return Reference
    is
    begin
-      return new Instance'
+      return This : constant Reference := new Instance'
         (Operator   => Operator,
          Context    => Context,
-         Expression => Expressions.Reference (Expression),
-         others     => <>);
+         Errors     => <>,
+         Env        => <>,
+         Properties => <>,
+         Expression => Expressions.Reference (Expression))
+      do
+         null;
+      end return;
    end Unary;
 
    -----------
@@ -181,7 +185,8 @@ package body Macro11.Syntax.Expressions.Operators is
       if Dispatch (This).Has_Word_Value then
          return Macro11.Values.Reference
            (Macro11.Values.Constants.Constant_Value
-              (Dispatch (This).To_Word_Value));
+              (Pdp11.Word_32
+                   (Dispatch (This).To_Word_Value)));
       else
          Dispatch (This).Children (1).Add_Error
            ("non-static expression");

@@ -53,6 +53,20 @@ package body Macro11.Bytecode is
       This.Append (Pdp11.Word_8 (Value / 256));
    end Append;
 
+   ------------
+   -- Append --
+   ------------
+
+   procedure Append
+     (This  : in out Instance'Class;
+      Value : Pdp11.Word_32)
+   is
+      use type Pdp11.Word_32;
+   begin
+      This.Append (Pdp11.Word_16 (Value mod 65536));
+      This.Append (Pdp11.Word_16 (Value / 65536));
+   end Append;
+
    --------------------
    -- Get_Allocation --
    --------------------

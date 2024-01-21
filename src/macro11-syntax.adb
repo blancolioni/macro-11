@@ -1,4 +1,5 @@
 with Ada.Exceptions;
+with Ada.Tags;
 with Ada.Text_IO;
 
 with Macro11.Logging;
@@ -49,6 +50,9 @@ package body Macro11.Syntax is
    begin
       if not This.Has_Property (No_Allocation) then
          for Child of Dispatch (This).Children loop
+            if This.Has_Property (Double_Allocation) then
+               Child.Set_Property (Double_Allocation);
+            end if;
             Child.Allocate (Offset);
          end loop;
       end if;
@@ -306,7 +310,10 @@ package body Macro11.Syntax is
          Ada.Text_IO.Put_Line
            (Ada.Text_IO.Standard_Error,
             This.Show_Context
-            & ": " & This.To_String
+            & ": "
+            & Ada.Tags.External_Tag (This'Tag)
+            & ": "
+            & This.To_String
             & ": translate: internal error: "
             & Ada.Exceptions.Exception_Message (E));
          raise;
